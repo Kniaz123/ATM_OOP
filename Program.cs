@@ -8,11 +8,10 @@ namespace Bankomat_Zdurov
 {
     class Program
     {
-        static void availableMoney(int[,] countMoney)
+        static int availableMoney(int[,] countMoney)
         {
             Console.WriteLine("Доступно банкнот:");
-
-            string[] readText = File.ReadAllLines(@"countMoney.txt");
+            string[] readText = File.ReadAllLines(@"countMoney1.txt");
             int i = 0;
             foreach (string line in readText)
             {
@@ -22,37 +21,39 @@ namespace Bankomat_Zdurov
                 Console.WriteLine("{0} - {1} купюр", countMoney[i, 0], countMoney[i, 1]);
                 i++;
             }
+            return --i;
         }
 
-        static void giveMoney(int[,] countMoney, int moneyClient)
+        static void giveMoney(int amountLines, int[,] countMoney, int moneyClient, int[] banknotes)
         {
-            int[] banknotes = new int[4] { 0, 0, 0, 0 };
-            if (moneyClient >= 20000 && moneyClient <= 5000000)
+            
+            if (moneyClient != 0)
             {
-                StreamWriter file = new StreamWriter(@"countMoney.txt");
-                Console.WriteLine("\nВыдано:");
-                if (moneyClient % 50000 != 0 && countMoney[0, 1] >= 3)
+                int j = amountLines;
+                moneyClient = moneySelection(countMoney, moneyClient, banknotes, j);
+                
+                while (moneyClient != 0 )
                 {
-                    banknotes[0] += 3;
-                    moneyClient -= 60000;
-                    countMoney[0, 1] -= 3;
+                    for (int i = 0; i < amountLines + 1; i++)
+                    {
+                        if (banknotes[i] != 0)
+                        {
+                            banknotes[i]--;
+                            moneyClient += countMoney[i, 0];
+                            j = --i;
+                            break;
+                        }
+                    }
+                    moneyClient = moneySelection(countMoney, moneyClient, banknotes, j);
                 }
-                for (int i = 3; i >= 0; i--)
-                {
-                    if (moneyClient / countMoney[i, 0] > countMoney[i, 1])
-                        banknotes[i] = countMoney[i, 1];
-                    else
-                        banknotes[i] = moneyClient / countMoney[i, 0];
-                    moneyClient -= banknotes[i] * countMoney[i, 0];
-                    countMoney[i, 1] -= banknotes[i];
-
+                Console.WriteLine("\nВыдано:");
+                StreamWriter file = new StreamWriter(@"countMoney1.txt");
+                for (int i = 0; i < amountLines + 1; i++)
+                {   
                     if (banknotes[i] > 0)
                     {
                         Console.WriteLine("{0}: {1}", countMoney[i, 0], banknotes[i]);
                     }
-                }
-                for (int i = 0; i < 4; i++)
-                {
                     file.WriteLine("{0} - {1}", countMoney[i, 0], countMoney[i, 1]);
                 }
                 file.Close();
@@ -62,17 +63,31 @@ namespace Bankomat_Zdurov
                 Console.WriteLine("Введена неверная сумма!");
         }
 
+        static int moneySelection(int[,] countMoney, int moneyClient, int[] banknotes, int j)
+        {
+            for (int i = j; i >= 0; i--)
+                {
+                    if (moneyClient / countMoney[i, 0] > countMoney[i, 1])
+                        banknotes[i] += countMoney[i, 1];
+                    else
+                        banknotes[i] += moneyClient / countMoney[i, 0];
+                    moneyClient -= banknotes[i] * countMoney[i, 0];
+                    countMoney[i, 1] -= banknotes[i];
+                }
+            return moneyClient;
+        }
+
         static void Main(string[] args)
         {
             try
             {
                 int[,] countMoney = new int[4, 2];
-                availableMoney(countMoney);
-                Console.WriteLine("\nМинимальная сумма: 20000 р.\nМаксимальная сумма: 5000000 р.\n\nВведите сумму в рублях:");
+                int[] banknotes = new int[4] { 0, 0, 0, 0 };
+                int amountLines = availableMoney(countMoney);
+                Console.WriteLine("\nВведите сумму в рублях:");
                 int moneyClient = int.Parse(Console.ReadLine());
 
-
-                giveMoney(countMoney, moneyClient);
+                giveMoney(amountLines, countMoney, moneyClient, banknotes);
 
             }
             catch
